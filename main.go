@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Pauloo27/normigo/ocr"
+	"github.com/Pauloo27/normigo/reddit"
 	"github.com/Pauloo27/normigo/utils"
 	"github.com/fogleman/gg"
 )
@@ -95,7 +97,12 @@ func drawCaption(canvas *image.RGBA, text string, height int, fontH float64) *gg
 	return dc
 }
 
-func main() {
+func printUsage() {
+	fmt.Println("Usage: normigo <reddit url>")
+	fmt.Println(`Usage: normigo <image path> "<caption>" [font size (optional)]`)
+}
+
+func fromImage() {
 	fontSize := 0.0
 	if len(os.Args) != 3 {
 		if len(os.Args) == 4 {
@@ -103,7 +110,7 @@ func main() {
 			utils.HandleError(err, "Cannot parse font size")
 			fontSize = value
 		} else {
-			fmt.Println(`Missing parameters.\nUsage: normigo <src> "<caption>" [font size (optional)]`)
+			printUsage()
 			os.Exit(-1)
 		}
 	}
@@ -122,4 +129,23 @@ func main() {
 
 	err := dc.SavePNG("meme.png")
 	utils.HandleError(err, "Cannot save output file")
+}
+
+func fromReddit() {
+	postURL := os.Args[1]
+	imageURL := reddit.GetImageURL(postURL)
+	text := ocr.GetTextFromImageURL(imageURL)
+	fmt.Println(text)
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		printUsage()
+		os.Exit(-1)
+	}
+	if len(os.Args) == 2 {
+		fromReddit()
+	} else {
+		fromImage()
+	}
 }
