@@ -103,7 +103,7 @@ func main() {
 	fontSize, err := strconv.ParseFloat(os.Args[2], 64)
 	handleError(err)
 
-	caption := strings.Join(os.Args[3:], " ")
+	caption := strings.ReplaceAll(strings.Join(os.Args[3:], " "), "\\n", "\n")
 
 	img := loadImage(path)
 
