@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Pauloo27/normigo/ocr"
 	"github.com/Pauloo27/normigo/reddit"
 	"github.com/Pauloo27/normigo/translate"
 	"github.com/Pauloo27/normigo/utils"
@@ -104,6 +103,17 @@ func printUsage() {
 	fmt.Println(`Usage: normigo <image path> "<caption>" [font size (optional)]`)
 }
 
+func applyTranslation(img image.Image, caption string, fontSize float64) {
+	height, color := captionBox(img)
+
+	canvas := removeCaption(img, height, color)
+
+	dc := drawCaption(canvas, caption, height, fontSize)
+
+	err := dc.SavePNG("meme.png")
+	utils.HandleError(err, "Cannot save output file")
+}
+
 func fromImage() {
 	fontSize := 0.0
 	if len(os.Args) != 3 {
@@ -123,39 +133,26 @@ func fromImage() {
 
 	img := loadImage(path)
 
-	height, color := captionBox(img)
-
-	canvas := removeCaption(img, height, color)
-
-	dc := drawCaption(canvas, caption, height, fontSize)
-
-	err := dc.SavePNG("meme.png")
-	utils.HandleError(err, "Cannot save output file")
+	applyTranslation(img, caption, fontSize)
 }
 
 func fromReddit() {
 	err := godotenv.Load()
 	utils.HandleError(err, "Cannot .env file")
 
-	apiKey := os.Getenv("OCR_APIKEY")
+	//apiKey := os.Getenv("OCR_APIKEY")
 	postURL := os.Args[1]
 	imageURL := reddit.GetImageURL(postURL)
 	fmt.Println(imageURL)
-	text := strings.ReplaceAll(ocr.GetTextFromImageURL(imageURL, apiKey), "\r\n", " ")
-	fmt.Println(text)
-	result, err := translate.Translate(text, "en", "pt")
-	utils.HandleError(err, "Cannot translate")
-	fmt.Println(result.TranslatedText)
+	//text := strings.ReplaceAll(ocr.GetTextFromImageURL(imageURL, apiKey), "\r\n", " ")
+	text := "Testing text to avoid rate limit and etc"
+	fmt.Println("Raw text:", text)
+	result := translate.Translate(text, "en", "pt")
+	fmt.Println("Translated text:", result.TranslatedText)
+
+	applyTranslation(nil, result.TranslatedText, 0.0)
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(-1)
-	}
-	if len(os.Args) == 2 {
-		fromReddit()
-	} else {
-		fromImage()
-	}
+
 }
