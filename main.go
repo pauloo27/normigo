@@ -5,9 +5,11 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
 	_ "image/png"
 	"os"
+	"strings"
+
+	"github.com/fogleman/gg"
 )
 
 func handleError(err error) {
@@ -76,19 +78,36 @@ func removeCaption(img image.Image, height int, color color.Color) *image.RGBA {
 	return canvas
 }
 
+func drawCaption(canvas *image.RGBA, text string) *gg.Context {
+	width := canvas.Bounds().Max.X
+	dc := gg.NewContextForRGBA(canvas)
+	dc.SetRGB(0, 0, 0)
+	if err := dc.LoadFontFace("fonts/font.ttf", 32); err != nil {
+		panic(err)
+	}
+	dc.DrawStringWrapped(strings.ToUpper(text), 5, 10, 0, 0, float64(width-5), 1.25, gg.AlignLeft)
+
+	return dc
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Missing meme path parameter")
+	if len(os.Args) < 3 {
+		fmt.Println("Missing parameters.\nUsage: normigo <src> <caption>")
 		os.Exit(-1)
 	}
+
 	path := os.Args[1]
+
+	caption := strings.Join(os.Args[2:], " ")
+
 	img := loadImage(path)
+
 	height, color := captionBox(img)
+
 	canvas := removeCaption(img, height, color)
 
-	outputFile, err := os.Create("meme.jpg")
-	handleError(err)
+	dc := drawCaption(canvas, caption)
 
-	err = jpeg.Encode(outputFile, canvas, nil)
+	err := dc.SavePNG("meme.png")
 	handleError(err)
 }
