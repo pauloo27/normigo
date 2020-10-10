@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	_ "image/png"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/fogleman/gg"
@@ -78,14 +79,17 @@ func removeCaption(img image.Image, height int, color color.Color) *image.RGBA {
 	return canvas
 }
 
-func drawCaption(canvas *image.RGBA, text string, height int) *gg.Context {
+func drawCaption(canvas *image.RGBA, text string, height int, fontH float64) *gg.Context {
 	width := canvas.Bounds().Max.X
 	dc := gg.NewContextForRGBA(canvas)
 
-	textLen := len(text)
+	if fontH == 0 {
+		textLen := len(text)
 
-	fontH := (float64(width) * float64(height)) / (float64(textLen) * 45.0)
-	fmt.Println(fontH)
+		fontH = (float64(width) * float64(height)) / (float64(textLen) * 45.0)
+		fmt.Println("Current font size:", fontH)
+		fmt.Println("If the font size sucks, pass a better one after the caption parameter.")
+	}
 
 	dc.SetRGB(0, 0, 0)
 	if err := dc.LoadFontFace("fonts/font.ttf", fontH); err != nil {
@@ -97,14 +101,21 @@ func drawCaption(canvas *image.RGBA, text string, height int) *gg.Context {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Missing parameters.\nUsage: normigo <src> <font size> <caption>")
-		os.Exit(-1)
+	fontSize := 0.0
+	if len(os.Args) != 3 {
+		if len(os.Args) == 4 {
+			value, err := strconv.ParseFloat(os.Args[3], 64)
+			handleError(err)
+			fontSize = value
+		} else {
+			fmt.Println(`Missing parameters.\nUsage: normigo <src> "<caption>" [font size (optional)]`)
+			os.Exit(-1)
+		}
 	}
 
 	path := os.Args[1]
 
-	caption := strings.ReplaceAll(strings.Join(os.Args[2:], " "), "\\n", "\n")
+	caption := os.Args[2]
 
 	img := loadImage(path)
 
@@ -112,7 +123,7 @@ func main() {
 
 	canvas := removeCaption(img, height, color)
 
-	dc := drawCaption(canvas, caption, height)
+	dc := drawCaption(canvas, caption, height, fontSize)
 
 	err := dc.SavePNG("meme.png")
 	handleError(err)
