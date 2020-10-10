@@ -29,7 +29,7 @@ func GetImageURL(postURL string) string {
 	}
 
 	req, err := http.NewRequest("GET", path, nil)
-	utils.HandleError(err, "Cannot create GET  request")
+	utils.HandleError(err, "Cannot create GET request")
 
 	req.Header.Add("User-Agent", `NormIGo`)
 
@@ -37,7 +37,7 @@ func GetImageURL(postURL string) string {
 	utils.HandleError(err, "Cannot request to "+path)
 
 	bodyB, err := ioutil.ReadAll(res.Body)
-	utils.HandleError(err, "Cannot read res bytes")
+	utils.HandleError(err, "Cannot read body")
 
 	defer res.Body.Close()
 
