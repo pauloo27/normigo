@@ -12,8 +12,10 @@ import (
 
 	"github.com/Pauloo27/normigo/ocr"
 	"github.com/Pauloo27/normigo/reddit"
+	"github.com/Pauloo27/normigo/translate"
 	"github.com/Pauloo27/normigo/utils"
 	"github.com/fogleman/gg"
+	"github.com/joho/godotenv"
 )
 
 func loadImage(path string) image.Image {
@@ -132,10 +134,18 @@ func fromImage() {
 }
 
 func fromReddit() {
+	err := godotenv.Load()
+	utils.HandleError(err, "Cannot .env file")
+
+	apiKey := os.Getenv("OCR_APIKEY")
 	postURL := os.Args[1]
 	imageURL := reddit.GetImageURL(postURL)
-	text := ocr.GetTextFromImageURL(imageURL)
+	fmt.Println(imageURL)
+	text := strings.ReplaceAll(ocr.GetTextFromImageURL(imageURL, apiKey), "\r\n", " ")
 	fmt.Println(text)
+	result, err := translate.Translate(text, "en", "pt")
+	utils.HandleError(err, "Cannot translate")
+	fmt.Println(result.TranslatedText)
 }
 
 func main() {

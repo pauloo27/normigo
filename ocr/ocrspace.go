@@ -15,8 +15,8 @@ type OCRResult struct {
 	}
 }
 
-func GetTextFromImageURL(imageURL string) string {
-	path := fmt.Sprintf("https://api.ocr.space/parse/imageurl?apikey=helloworld&url=%s", imageURL)
+func GetTextFromImageURL(imageURL, apiKey string) string {
+	path := fmt.Sprintf("https://api.ocr.space/parse/imageurl?apikey=%sd&url=%s", apiKey, imageURL)
 
 	res, err := http.Get(path)
 	utils.HandleError(err, "Cannot get "+path)
