@@ -10,23 +10,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Pauloo27/normigo/utils"
 	"github.com/fogleman/gg"
 )
 
-func handleError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func loadImage(path string) image.Image {
 	imgFile, err := os.Open(path)
-	handleError(err)
+	utils.HandleError(err, "Cannot open file")
 
 	defer imgFile.Close()
 
 	img, _, err := image.Decode(imgFile)
-	handleError(err)
+	utils.HandleError(err, "Cannot decode image")
 
 	return img
 }
@@ -105,7 +100,7 @@ func main() {
 	if len(os.Args) != 3 {
 		if len(os.Args) == 4 {
 			value, err := strconv.ParseFloat(os.Args[3], 64)
-			handleError(err)
+			utils.HandleError(err, "Cannot parse font size")
 			fontSize = value
 		} else {
 			fmt.Println(`Missing parameters.\nUsage: normigo <src> "<caption>" [font size (optional)]`)
@@ -126,5 +121,5 @@ func main() {
 	dc := drawCaption(canvas, caption, height, fontSize)
 
 	err := dc.SavePNG("meme.png")
-	handleError(err)
+	utils.HandleError(err, "Cannot save output file")
 }
