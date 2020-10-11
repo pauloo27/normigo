@@ -1,0 +1,29 @@
+{{template "header"}}
+<div class="container">
+  {{if .Err}}
+  <h4>Error: {{ .Err }}</h4>
+  {{else}}
+  <form action="/generate" class="w-50 mx-auto">
+    <img class="original-meme" src="{{.ImageURL}}"/>
+    <div class="input-group my-3">
+      <input
+        id="caption"
+        name="caption"
+        type="text"
+        class="form-control text-light bg-dark"
+        placeholder="Translated Caption"
+      />
+      <div class="input-group-append">
+        <button id="button" onclick="handleClick({{.ImageURL}})" class="btn btn-outline-primary" type="button" >OCR</button>
+      </div>
+    </div>
+    <input
+      type="submit"
+      class="form-control btn btn-primary mt-2"
+      value="Generate"
+    />
+  </form>
+  <script src="/assets/js/fill.js"></script>
+  {{end}}
+</div>
+{{template "footer"}}

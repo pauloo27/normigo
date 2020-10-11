@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
-	"github.com/Pauloo27/normigo/utils"
 )
 
 type RedditPost struct {
@@ -19,7 +17,7 @@ type RedditPost struct {
 	} `json:"data"`
 }
 
-func GetImageURL(postURL string) string {
+func GetImageURL(postURL string) (string, error) {
 	client := &http.Client{}
 
 	path := strings.Split(postURL, "?")[0]
@@ -29,22 +27,30 @@ func GetImageURL(postURL string) string {
 	}
 
 	req, err := http.NewRequest("GET", path, nil)
-	utils.HandleError(err, "Cannot create GET request")
+	if err != nil {
+		return "", err
+	}
 
 	req.Header.Add("User-Agent", `NormIGo`)
 
 	res, err := client.Do(req)
-	utils.HandleError(err, "Cannot request to "+path)
+	if err != nil {
+		return "", err
+	}
 
 	bodyB, err := ioutil.ReadAll(res.Body)
-	utils.HandleError(err, "Cannot read body")
+	if err != nil {
+		return "", err
+	}
 
 	defer res.Body.Close()
 
 	var results []RedditPost
 
 	err = json.Unmarshal(bodyB, &results)
-	utils.HandleError(err, "Cannot parse json")
+	if err != nil {
+		return "", err
+	}
 
-	return results[0].Data.Children[0].Data.URL
+	return results[0].Data.Children[0].Data.URL, nil
 }

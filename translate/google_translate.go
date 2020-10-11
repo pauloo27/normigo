@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Pauloo27/normigo/utils"
 	"github.com/buger/jsonparser"
 )
 
@@ -14,29 +13,53 @@ type TranslateResult struct {
 	OriginalText, TranslatedText, From, To string
 }
 
-func Translate(text, from, to string) TranslateResult {
-	res, err := http.Get(fmt.Sprintf("https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s&ie=UTF-8&oe=UTF-8", url.QueryEscape(from), url.QueryEscape(to), url.QueryEscape(text)))
+func Translate(text, from, to string) (TranslateResult, error) {
+	res, err := http.Get(fmt.Sprintf(
+		"https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s&ie=UTF-8&oe=UTF-8",
+		url.QueryEscape(from),
+		url.QueryEscape(to),
+		url.QueryEscape(text),
+	))
 
-	utils.HandleError(err, "Cannot do get request")
+	if err != nil {
+		return TranslateResult{}, err
+	}
 
 	body, err := ioutil.ReadAll(res.Body)
-	utils.HandleError(err, "Cannot read body")
+	if err != nil {
+		return TranslateResult{}, err
+	}
 
 	defer res.Body.Close()
 
 	finalText := ""
 
 	data, _, _, err := jsonparser.Get(body, "[0]")
-	utils.HandleError(err, "Cannot parse json")
+	if err != nil {
+		return TranslateResult{}, err
+	}
 
+	var funcErr error
 	_, err = jsonparser.ArrayEach(data, func(sentence []byte, t jsonparser.ValueType, i int, err error) {
-		utils.HandleError(err, "Cannot parse json")
+		if err != nil {
+			funcErr = err
+			return
+		}
 		text, _, _, err := jsonparser.Get(sentence, "[0]")
-		utils.HandleError(err, "Cannot parse json")
+		if err != nil {
+			funcErr = err
+			return
+		}
 		finalText += string(text)
 	})
 
-	utils.HandleError(err, "Cannot parse json")
+	if funcErr != nil {
+		return TranslateResult{}, funcErr
+	}
 
-	return TranslateResult{OriginalText: text, From: from, To: to, TranslatedText: finalText}
+	if err != nil {
+		return TranslateResult{}, err
+	}
+
+	return TranslateResult{OriginalText: text, From: from, To: to, TranslatedText: finalText}, nil
 }

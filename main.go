@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"image"
 	"image/color"
 	"image/draw"
 	_ "image/png"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -14,7 +16,6 @@ import (
 	"github.com/Pauloo27/normigo/translate"
 	"github.com/Pauloo27/normigo/utils"
 	"github.com/fogleman/gg"
-	"github.com/joho/godotenv"
 )
 
 func loadImage(path string) image.Image {
@@ -136,23 +137,47 @@ func fromImage() {
 	applyTranslation(img, caption, fontSize)
 }
 
-func fromReddit() {
-	err := godotenv.Load()
-	utils.HandleError(err, "Cannot .env file")
-
-	//apiKey := os.Getenv("OCR_APIKEY")
-	postURL := os.Args[1]
-	imageURL := reddit.GetImageURL(postURL)
-	fmt.Println(imageURL)
-	//text := strings.ReplaceAll(ocr.GetTextFromImageURL(imageURL, apiKey), "\r\n", " ")
-	text := "Testing text to avoid rate limit and etc"
-	fmt.Println("Raw text:", text)
-	result := translate.Translate(text, "en", "pt")
-	fmt.Println("Translated text:", result.TranslatedText)
-
-	applyTranslation(nil, result.TranslatedText, 0.0)
+type FillPage struct {
+	ImageURL string
+	Err      error
 }
 
 func main() {
+	templates := template.Must(template.ParseFiles("www/main.html", "www/home.html", "www/fill.html"))
+	homeTemplate := templates.Lookup("home.html")
+	fillTemplate := templates.Lookup("fill.html")
 
+	fs := http.FileServer(http.Dir("www/assets/"))
+
+	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
+
+	http.HandleFunc("/tr/", func(w http.ResponseWriter, r *http.Request) {
+		text := r.FormValue("text")
+		result, err := translate.Translate(text, "en", "pt")
+		if err != nil {
+			fmt.Fprintln(w, "error:", err)
+		}
+		fmt.Fprintln(w, result.TranslatedText)
+	})
+
+	http.HandleFunc("/ocr/", func(w http.ResponseWriter, r *http.Request) {
+		imageURL := r.FormValue("url")
+		fmt.Fprintln(w, imageURL)
+	})
+
+	http.HandleFunc("/fill/", func(w http.ResponseWriter, r *http.Request) {
+		imageURL, err := reddit.GetImageURL(r.FormValue("url"))
+		data := FillPage{imageURL, err}
+		err = fillTemplate.Execute(w, data)
+		utils.HandleError(err, "Cannot run template")
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		err := homeTemplate.Execute(w, nil)
+		utils.HandleError(err, "Cannot run template")
+	})
+
+	fmt.Println("Running server at localhost:25555")
+	err := http.ListenAndServe(":25555", nil)
+	utils.HandleError(err, "Cannot start server")
 }

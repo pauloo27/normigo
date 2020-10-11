@@ -1,0 +1,16 @@
+html, body {
+  height: 100%;
+}
+
+.bg-dark {
+  background-color: #323232 !important;
+}
+
+.main-bg {
+  background-color: #1a1a1a !important;
+}
+
+.original-meme {
+  width: 100%;
+  height: auto;
+}
