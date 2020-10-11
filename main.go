@@ -40,10 +40,10 @@ func getColorDiff(a color.Color, b color.Color) (diff uint32) {
 	return
 }
 
-func captionBox(img image.Image) (y int, boxColor color.Color) {
+func captionBox(img image.Image) (y int) {
 	max := img.Bounds().Max.Y
 
-	boxColor = img.At(0, 0)
+	boxColor := img.At(0, 0)
 
 	for y = 0; y < max; y++ {
 		color := img.At(0, y)
@@ -57,12 +57,12 @@ func captionBox(img image.Image) (y int, boxColor color.Color) {
 	return
 }
 
-func removeCaption(img image.Image, height int, color color.Color) *image.RGBA {
+func removeCaption(img image.Image, height int) *image.RGBA {
 	width := img.Bounds().Max.X
 	canvas := image.NewRGBA(img.Bounds())
 
 	draw.Draw(canvas, canvas.Bounds(), img, image.Point{0, 0}, draw.Src)
-	draw.Draw(canvas, image.Rect(0, 0, width, height), &image.Uniform{color}, image.Point{0, 0}, draw.Src)
+	draw.Draw(canvas, image.Rect(0, 0, width, height), &image.Uniform{color.White}, image.Point{0, 0}, draw.Src)
 
 	return canvas
 }
@@ -89,9 +89,9 @@ func drawCaption(canvas *image.RGBA, text string, height int, fontH float64) *gg
 }
 
 func applyTranslation(img image.Image, caption string, fontSize float64) {
-	height, color := captionBox(img)
+	height := captionBox(img)
 
-	canvas := removeCaption(img, height, color)
+	canvas := removeCaption(img, height)
 
 	dc := drawCaption(canvas, caption, height, fontSize)
 
