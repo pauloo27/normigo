@@ -134,7 +134,7 @@ func main() {
 		var finalErr error
 
 		originalImageURL := r.FormValue("url")
-		caption := strings.Replace(r.FormValue("caption"), "\\n", "\n")
+		caption := strings.ReplaceAll(r.FormValue("caption"), "\\n", "\n")
 
 		res, err := http.Get(originalImageURL)
 		if err != nil {
