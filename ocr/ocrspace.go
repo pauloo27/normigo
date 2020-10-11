@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/Pauloo27/normigo/utils"
 )
 
 type OCRResult struct {
@@ -15,22 +13,27 @@ type OCRResult struct {
 	}
 }
 
-func GetTextFromImageURL(imageURL, apiKey string) string {
+func GetTextFromImageURL(imageURL, apiKey string) (string, error) {
 	path := fmt.Sprintf("https://api.ocr.space/parse/imageurl?apikey=%sd&url=%s", apiKey, imageURL)
 
 	res, err := http.Get(path)
-	utils.HandleError(err, "Cannot get "+path)
+	if err != nil {
+		return "", err
+	}
 
 	bodyB, err := ioutil.ReadAll(res.Body)
-
-	utils.HandleError(err, "Cannot read body")
+	if err != nil {
+		return "", err
+	}
 
 	defer res.Body.Close()
 
 	var result OCRResult
 
 	err = json.Unmarshal(bodyB, &result)
-	utils.HandleError(err, "Cannot parser json")
+	if err != nil {
+		return "", err
+	}
 
-	return result.ParsedResults[0].ParsedText
+	return result.ParsedResults[0].ParsedText, nil
 }

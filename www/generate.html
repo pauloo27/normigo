@@ -1,0 +1,11 @@
+{{template "header"}}
+<div class="container">
+  {{if .Err}}
+  <h4>Error: {{ .Err }}</h4>
+  {{else}}
+  <form action="/generate" class="w-50 mx-auto">
+    <img class="meme-frame" src="{{.ImageURL}}"/>
+  </form>
+  {{end}}
+</div>
+{{template "footer"}}

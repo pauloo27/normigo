@@ -9,26 +9,15 @@ import (
 	_ "image/png"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/Pauloo27/normigo/ocr"
 	"github.com/Pauloo27/normigo/reddit"
 	"github.com/Pauloo27/normigo/translate"
 	"github.com/Pauloo27/normigo/utils"
 	"github.com/fogleman/gg"
+	"github.com/joho/godotenv"
 )
-
-func loadImage(path string) image.Image {
-	imgFile, err := os.Open(path)
-	utils.HandleError(err, "Cannot open file")
-
-	defer imgFile.Close()
-
-	img, _, err := image.Decode(imgFile)
-	utils.HandleError(err, "Cannot decode image")
-
-	return img
-}
 
 func getColorDiff(a color.Color, b color.Color) (diff uint32) {
 	diff = 0
@@ -99,11 +88,6 @@ func drawCaption(canvas *image.RGBA, text string, height int, fontH float64) *gg
 	return dc
 }
 
-func printUsage() {
-	fmt.Println("Usage: normigo <reddit url>")
-	fmt.Println(`Usage: normigo <image path> "<caption>" [font size (optional)]`)
-}
-
 func applyTranslation(img image.Image, caption string, fontSize float64) {
 	height, color := captionBox(img)
 
@@ -111,30 +95,8 @@ func applyTranslation(img image.Image, caption string, fontSize float64) {
 
 	dc := drawCaption(canvas, caption, height, fontSize)
 
-	err := dc.SavePNG("meme.png")
+	err := dc.SavePNG("www/assets/meme.png")
 	utils.HandleError(err, "Cannot save output file")
-}
-
-func fromImage() {
-	fontSize := 0.0
-	if len(os.Args) != 3 {
-		if len(os.Args) == 4 {
-			value, err := strconv.ParseFloat(os.Args[3], 64)
-			utils.HandleError(err, "Cannot parse font size")
-			fontSize = value
-		} else {
-			printUsage()
-			os.Exit(-1)
-		}
-	}
-
-	path := os.Args[1]
-
-	caption := os.Args[2]
-
-	img := loadImage(path)
-
-	applyTranslation(img, caption, fontSize)
 }
 
 type FillPage struct {
@@ -142,18 +104,61 @@ type FillPage struct {
 	Err      error
 }
 
+type GeneratePage struct {
+	OriginalImageURL, ImageURL, Caption string
+	Err                                 error
+}
+
 func main() {
-	templates := template.Must(template.ParseFiles("www/main.html", "www/home.html", "www/fill.html"))
+	err := godotenv.Load()
+	utils.HandleError(err, "Cannot load .env")
+
+	apiKey := os.Getenv("OCR_APIKEY")
+
+	templates := template.Must(template.ParseFiles(
+		"www/main.html",
+		"www/home.html",
+		"www/fill.html",
+		"www/generate.html",
+	))
+
 	homeTemplate := templates.Lookup("home.html")
 	fillTemplate := templates.Lookup("fill.html")
+	generateTemplate := templates.Lookup("generate.html")
 
 	fs := http.FileServer(http.Dir("www/assets/"))
 
 	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
 
+	http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
+		var finalErr error
+
+		originalImageURL := r.FormValue("url")
+		caption := r.FormValue("caption")
+
+		res, err := http.Get(originalImageURL)
+		if err != nil {
+			finalErr = err
+		} else {
+			img, _, err := image.Decode(res.Body)
+			if err != nil {
+				finalErr = err
+			}
+
+			defer res.Body.Close()
+
+			applyTranslation(img, caption, 0)
+		}
+		imageURL := "/assets/meme.png"
+
+		err = generateTemplate.Execute(w, GeneratePage{originalImageURL, imageURL, caption, finalErr})
+		utils.HandleError(err, "Cannot run template")
+	})
+
 	http.HandleFunc("/tr/", func(w http.ResponseWriter, r *http.Request) {
 		text := r.FormValue("text")
 		result, err := translate.Translate(text, "en", "pt")
+
 		if err != nil {
 			fmt.Fprintln(w, "error:", err)
 		}
@@ -162,13 +167,16 @@ func main() {
 
 	http.HandleFunc("/ocr/", func(w http.ResponseWriter, r *http.Request) {
 		imageURL := r.FormValue("url")
-		fmt.Fprintln(w, imageURL)
+		text, err := ocr.GetTextFromImageURL(imageURL, apiKey)
+		if err != nil {
+			fmt.Fprintln(w, "error:", err)
+		}
+		fmt.Fprintln(w, text)
 	})
 
 	http.HandleFunc("/fill/", func(w http.ResponseWriter, r *http.Request) {
 		imageURL, err := reddit.GetImageURL(r.FormValue("url"))
-		data := FillPage{imageURL, err}
-		err = fillTemplate.Execute(w, data)
+		err = fillTemplate.Execute(w, FillPage{imageURL, err})
 		utils.HandleError(err, "Cannot run template")
 	})
 
@@ -178,6 +186,6 @@ func main() {
 	})
 
 	fmt.Println("Running server at localhost:25555")
-	err := http.ListenAndServe(":25555", nil)
+	err = http.ListenAndServe(":25555", nil)
 	utils.HandleError(err, "Cannot start server")
 }
