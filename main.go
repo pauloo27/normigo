@@ -47,10 +47,8 @@ func captionBox(img image.Image) (y int) {
 
 	for y = 0; y < max; y++ {
 		color := img.At(0, y)
-		if color != boxColor {
-			if getColorDiff(color, boxColor) >= 8000 {
-				break
-			}
+		if color != boxColor && getColorDiff(color, boxColor) >= 8000 {
+			break
 		}
 	}
 
